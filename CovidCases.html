@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Covid Case Counts</title>
+  <H2>Covid Cases - College Students & Prisoners</H2>
+  <nav>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="Population.html">Population</a></li>
+      <li><a href="CovidCases.html">Covid Cases</a></li>
+      <li><a href="CovidRates.html">Covid Rates</a></li>
+    </ul>
+  </nav>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    H3 {text-align:center;}
+    .bar {
+      fill: steelblue;
+    }
+    .bar.inmate {
+      fill: orange;
+    }
+    .label {
+      font-size: 12px;
+      text-anchor: middle;
+    }
+    .tooltip {
+      position: absolute;
+      text-align: center;
+      width: 80px;
+      height: 28px;
+      padding: 2px;
+      font: 12px sans-serif;
+      background: lightsteelblue;
+      border: 0px;
+      border-radius: 8px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="tooltip" class="tooltip" style="opacity:0"></div>
+  <script>
+    var collegeData = [
+      { State: "California", "Enrollment": 1270332, "Student Cases": 21483, "Student Rate": 0.017 },
+      { State: "Florida", "Enrollment": 909774, "Student Cases": 34760, "Student Rate": 0.038 },
+      { State: "Illinois", "Enrollment": 375156, "Student Cases": 23642, "Student Rate": 0.063 },
+      { State: "New York", "Enrollment": 1099919, "Student Cases": 38696, "Student Rate": 0.035 },
+      { State: "Texas", "Enrollment": 1007085, "Student Cases": 51493, "Student Rate": 0.051 }
+    ];
+    var prisonData = [
+      { State: "California", "Inmate Pop": 140390, "Inmate Cases": 66185, "Inmate Rate": 0.471 },
+      { State: "Florida", "Inmate Pop": 93942, "Inmate Cases": 20729, "Inmate Rate": 0.221 },
+      { State: "Illinois", "Inmate Pop": 34719, "Inmate Cases": 14159, "Inmate Rate": 0.408 },
+      { State: "New York", "Inmate Pop": 38502, "Inmate Cases": 7428, "Inmate Rate": 0.193 },
+      { State: "Texas", "Inmate Pop": 188613, "Inmate Cases": 50872, "Inmate Rate": 0.27 }
+    ];
+    
+    var combinedData = collegeData.map((d, i) => {
+      return {
+        State: d.State,
+        StudentCases: d["Student Cases"],
+        InmateCases: prisonData[i]["Inmate Cases"]
+      };
+    });
+
+    var margin = {top: 20, right: 30, bottom: 40, left: 70},
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+    
+    var x0 = d3.scaleBand()
+        .domain(combinedData.map(d => d.State))
+        .rangeRound([0, width])
+        .paddingInner(0.1);
+    
+    var x1 = d3.scaleBand()
+        .domain(['StudentCases', 'InmateCases'])
+        .rangeRound([0, x0.bandwidth()])
+        .padding(0.05);
+    
+    var y = d3.scaleLinear()
+        .domain([0, d3.max(combinedData, d => Math.max(d.StudentCases, d.InmateCases))])
+        .nice()
+        .rangeRound([height, 0]);
+
+    var color = d3.scaleOrdinal()
+        .range(["steelblue", "orange"]);
+    
+    var xAxis = d3.axisBottom(x0);
+    var yAxis = d3.axisLeft(y);
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    
+    var stateGroups = svg.append("g")
+        .selectAll("g")
+        .data(combinedData)
+        .enter().append("g")
+          .attr("transform", d => "translate(" + x0(d.State) + ",0)");
+    
+    stateGroups.selectAll("rect")
+        .data(d => [
+          {key: "StudentCases", value: d.StudentCases},
+          {key: "InmateCases", value: d.InmateCases}
+        ])
+        .enter().append("rect")
+          .attr("x", d => x1(d.key))
+          .attr("y", d => y(d.value))
+          .attr("width", x1.bandwidth())
+          .attr("height", d => height - y(d.value))
+          .attr("fill", d => color(d.key))
+          .on("mouseover", function(event, d) {
+            d3.select("#tooltip")
+              .style("opacity", 1)
+              .html(d.key + ": " + d.value)
+              .style("left", (event.pageX + 5) + "px")
+              .style("top", (event.pageY - 28) + "px");
+          })
+          .on("mouseout", function() {
+            d3.select("#tooltip").style("opacity", 0);
+          });
+    
+    stateGroups.selectAll("text")
+        .data(d => [
+          {key: "StudentCases", value: d.StudentCases},
+          {key: "InmateCases", value: d.InmateCases}
+        ])
+        .enter().append("text")
+          .attr("class", "label")
+          .attr("x", d => x1(d.key) + x1.bandwidth() / 2)
+          .attr("y", d => y(d.value) - 15)
+          .attr("dy", ".75em")
+          .attr("text-anchor", "middle")
+          .text(d => d.value);
+    
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+    
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis);
+
+  </script>  
+</body>
+</html>
